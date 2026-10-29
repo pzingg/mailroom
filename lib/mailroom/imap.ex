@@ -11,6 +11,7 @@ defmodule Mailroom.IMAP do
               state: :unauthenticated,
               ssl: false,
               ssl_opts: [],
+              trace: false,
               debug: false,
               cmd_map: %{},
               cmd_number: 1,
@@ -95,7 +96,7 @@ defmodule Mailroom.IMAP do
 
   defp parse_opts(
          opts,
-         acc \\ %{ssl: false, port: nil, debug: false, ssl_opts: [], auth: :login}
+         acc \\ %{ssl: false, port: nil, trace: false, debug: false, ssl_opts: [], auth: :login}
        )
 
   defp parse_opts([], acc),
@@ -109,6 +110,9 @@ defmodule Mailroom.IMAP do
 
   defp parse_opts([{:port, port} | tail], acc),
     do: parse_opts(tail, Map.put(acc, :port, port))
+
+  defp parse_opts([{:trace, trace} | tail], acc),
+    do: parse_opts(tail, Map.put(acc, :trace, trace))
 
   defp parse_opts([{:debug, debug} | tail], acc),
     do: parse_opts(tail, Map.put(acc, :debug, debug))
@@ -284,7 +288,7 @@ defmodule Mailroom.IMAP do
 
   def init(opts) do
     Process.set_label(__MODULE__)
-    {:ok, %State{debug: opts.debug, ssl: opts.ssl}}
+    {:ok, %State{trace: opts.trace, debug: opts.debug, ssl: opts.ssl}}
   end
 
   def handle_call({:connect, server, port, ssl_opts}, from, state) do
@@ -938,11 +942,15 @@ defmodule Mailroom.IMAP do
   defp send_command(
          caller,
          message,
-         %{socket: socket, cmd_number: cmd_number, cmd_map: cmd_map, mode: mode} = state
+         %{socket: socket, cmd_number: cmd_number, cmd_map: cmd_map, mode: mode, trace: trace} =
+           state
        ) do
     cmd_tag = "A#{String.pad_leading(Integer.to_string(cmd_number), 3, "0")}"
     command = hd(List.wrap(message))
     message = uid_command(message, mode)
+
+    if trace, do: IO.write("send #{cmd_tag} #{inspect(message)}\n")
+
     :ok = Socket.send(socket, [cmd_tag, " ", message, "\r\n"])
 
     %{

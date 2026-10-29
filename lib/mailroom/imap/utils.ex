@@ -33,7 +33,7 @@ defmodule Mailroom.IMAP.Utils do
     octets = String.to_integer(octets)
 
     case rest do
-      <<string::binary-size(octets), rest::binary>> ->
+      <<string::binary-size(^octets), rest::binary>> ->
         parse_list(rest, depth, nil, prepend_to_list(acc, string))
 
       _ ->
@@ -60,9 +60,9 @@ defmodule Mailroom.IMAP.Utils do
   def parse_list(<<>>, _depth, temp, acc),
     do: {Enum.reverse(prepend_to_list(acc, temp)), <<>>}
 
+  defp prepend_to_list(nil, "NIL"), do: [nil]
   defp prepend_to_list(nil, item), do: List.wrap(item)
   defp prepend_to_list(list, nil), do: list
-  defp prepend_to_list(nil, "NIL"), do: [nil]
   defp prepend_to_list(list, "NIL"), do: [nil | list]
   defp prepend_to_list(list, item), do: [item | list]
 
